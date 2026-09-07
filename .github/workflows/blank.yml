@@ -3,39 +3,41 @@ on:
   workflow_dispatch:
     inputs:
       access_password:
-        description: 'Defina uma senha para o usuário (ou use a padrão)'
+        description: 'Defina uma senha para o usuário'
         required: true
         default: '123456'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 360 # Mantém a máquina ligada por até 6 horas
+    timeout-minutes: 360
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Configurar Senha do Usuário
         run: |
           echo "runner:${{ github.event.inputs.access_password }}" | sudo chpasswd
           sudo usermod -aG sudo runner
 
-      - name: Instalar Servidor de Área de Trabalho e Ferramentas
+      - name: Instalar Servidor de Área de Trabalho LEVE
         run: |
           sudo apt update
-          sudo apt install -y xfce4 xfce4-goodies xrdp
-          sudo apt install -y firefox
+          sudo apt install -y --no-install-recommends xfce4 xfce4-terminal xrdp dbus-x11
           echo "xfce4-session" > ~/.xsession
-          sudo service xrdp start
+          sudo sed -i 's/port=3389/port=3389\naddress=0.0.0.0/' /etc/xrdp/xrdp.ini
+          sudo service xrdp restart
 
       - name: Instalar Tailscale
         run: |
           curl -fsSL https://tailscale.com/install.sh | sh
-          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }} --hostname=pc-virtual-github
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }} --hostname=pc-virtual --ssh
 
       - name: Manter PC Ligado
         run: |
-          echo "PC Virtual criado!"
-          echo "Acesse via RDP - Usuario: runner Senha: ${{ github.event.inputs.access_password }}"
-          echo "IP Tailscale: $(tailscale ip -4)"
-          while true; do sleep 300; done
+          echo "=========================================="
+          echo "PC VIRTUAL CRIADO COM SUCESSO!"
+          echo "IP: $(tailscale ip -4)"
+          echo "Usuario: runner"
+          echo "Senha: ${{ github.event.inputs.access_password }}"
+          echo "=========================================="
+          while true; do sleep 60; echo "PC online $(date)"; done
