@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       access_password:
-        description: 'Defina uma senha para o usuário'
+        description: 'Senha do PC'
         required: true
         default: '123456'
 
@@ -16,16 +16,19 @@ jobs:
 
       - name: Configurar Senha do Usuário
         run: |
-          echo "runner:${{ github.event.inputs.access_password }}" | sudo chpasswd
+          echo "runner:${{ inputs.access_password }}" | sudo chpasswd
           sudo usermod -aG sudo runner
 
-      - name: Instalar Servidor de Área de Trabalho LEVE
+      - name: Instalar Desktop SEM SNAP (ultra rápido)
         run: |
+          sudo systemctl stop snapd snapd.socket snapd.seeded || true
+          sudo apt-mark hold snapd || true
           sudo apt update
           sudo apt install -y --no-install-recommends xfce4 xfce4-terminal xrdp dbus-x11
           echo "xfce4-session" > ~/.xsession
-          sudo sed -i 's/port=3389/port=3389\naddress=0.0.0.0/' /etc/xrdp/xrdp.ini
+          sudo sed -i 's/3389/3389\naddress=0.0.0.0/' /etc/xrdp/xrdp.ini || true
           sudo service xrdp restart
+          echo "Desktop instalado sem snap!"
 
       - name: Instalar Tailscale
         run: |
@@ -35,9 +38,10 @@ jobs:
       - name: Manter PC Ligado
         run: |
           echo "=========================================="
-          echo "PC VIRTUAL CRIADO COM SUCESSO!"
-          echo "IP: $(tailscale ip -4)"
+          echo "PC VIRTUAL PRONTO!"
+          echo "IP Tailscale: $(tailscale ip -4)"
           echo "Usuario: runner"
-          echo "Senha: ${{ github.event.inputs.access_password }}"
+          echo "Senha: ${{ inputs.access_password }}"
+          echo "Baixe o Microsoft Remote Desktop e conecte"
           echo "=========================================="
-          while true; do sleep 60; echo "PC online $(date)"; done
+          while true; do sleep 60; echo "ONLINE $(date)"; done
