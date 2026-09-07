@@ -1,0 +1,41 @@
+name: Virtual Machine
+on:
+  workflow_dispatch:
+    inputs:
+      access_password:
+        description: 'Defina uma senha para o usuário (ou use a padrão)'
+        required: true
+        default: '123456'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 # Mantém a máquina ligada por até 6 horas
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configurar Senha do Usuário
+        run: |
+          echo "runner:${{ github.event.inputs.access_password }}" | sudo chpasswd
+          sudo usermod -aG sudo runner
+
+      - name: Instalar Servidor de Área de Trabalho e Ferramentas
+        run: |
+          sudo apt update
+          sudo apt install -y xfce4 xfce4-goodies xrdp
+          sudo apt install -y firefox
+          echo "xfce4-session" > ~/.xsession
+          sudo service xrdp start
+
+      - name: Instalar Tailscale
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }} --hostname=pc-virtual-github
+
+      - name: Manter PC Ligado
+        run: |
+          echo "PC Virtual criado!"
+          echo "Acesse via RDP - Usuario: runner Senha: ${{ github.event.inputs.access_password }}"
+          echo "IP Tailscale: $(tailscale ip -4)"
+          while true; do sleep 300; done
